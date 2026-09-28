@@ -85,7 +85,8 @@ footer svg{height:16px;width:auto}
   <header>
     <div>
       <div class="title">AEROSCOPE</div>
-      <div class="status"><span class="dot off" id="dot"></span><span id="stat">INIT</span></div>
+      <div class="status" id="statRow" style="cursor:pointer"><span class="dot off" id="dot"></span><span id="stat">INIT</span></div>
+      <div id="diag" style="font-size:13px;opacity:.55;max-width:62vw;line-height:1.2"></div>
     </div>
     <div class="btns">
       <button id="bLoc" title="Use my location">LOC</button>
@@ -207,23 +208,48 @@ function livePos(p,now){
   return [p.lat+d*Math.cos(th)/60, p.lon+d*Math.sin(th)/(60*cosLat())];
 }
 
-/* ---------- data ---------- */
-const ENDPOINTS=[
+/* ---------- data ----------
+   Free ADS-B feeds (adsb.lol / airplanes.live / adsb.fi) usually answer curl
+   and server-side fetches fine but sometimes withhold or restrict the
+   Access-Control-Allow-Origin header, which only browsers enforce - so the
+   failure is invisible outside a real browser. Every raw endpoint is tried
+   first, then the same endpoints again through a CORS-adding relay
+   (allorigins) as a fallback so a missing/blocked CORS header can't leave
+   the display stuck silently. */
+const RAW_SOURCES=[
   (la,lo,r)=>`https://api.adsb.lol/v2/point/${la}/${lo}/${r}`,
-  (la,lo,r)=>`https://api.airplanes.live/v2/point/${la}/${lo}/${r}`
+  (la,lo,r)=>`https://api.airplanes.live/v2/point/${la}/${lo}/${r}`,
+  (la,lo,r)=>`https://opendata.adsb.fi/api/v2/lat/${la}/lon/${lo}/dist/${r}`
 ];
+const viaRelay=url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+const ENDPOINTS=[...RAW_SOURCES, ...RAW_SOURCES.map(f=>(la,lo,r)=>viaRelay(f(la,lo,r)))];
+
+let lastErrMsg='';
 async function fetchJson(url){
   const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),9000);
-  try{ const res=await fetch(url,{signal:ctl.signal}); if(!res.ok) throw new Error(res.status); return await res.json(); }
-  finally{ clearTimeout(t); }
+  try{
+    const res=await fetch(url,{signal:ctl.signal,mode:'cors',cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return await res.json();
+  }catch(e){
+    if(e.name==='AbortError') throw new Error('timed out');
+    // A generic "Failed to fetch"/TypeError from fetch() almost always means
+    // CORS blocked the response or the network/DNS request itself failed.
+    throw new Error(e.message==='Failed to fetch'||e instanceof TypeError ? 'network/CORS blocked' : e.message);
+  } finally{ clearTimeout(t); }
 }
 async function poll(){
   if(polling||document.hidden) return;
   polling=true;
   const r=Math.min(250,Math.max(5,Math.ceil(S.range*1.05)));
-  let data=null;
+  let data=null, tried=0, err='';
   for(const ep of ENDPOINTS){
-    try{ data=await fetchJson(ep(S.lat.toFixed(4),S.lon.toFixed(4),r)); if(data&&Array.isArray(data.ac||data.aircraft)) break; }catch(e){ data=null; }
+    tried++;
+    try{
+      data=await fetchJson(ep(S.lat.toFixed(4),S.lon.toFixed(4),r));
+      if(data&&Array.isArray(data.ac||data.aircraft)) break;
+      data=null; err='unexpected response';
+    }catch(e){ data=null; err=e.message; }
   }
   if(data){
     const list=data.ac||data.aircraft||[];
@@ -245,13 +271,16 @@ async function poll(){
       if(!last||last[0]!==a.lat||last[1]!==a.lon){ p.trail.push([a.lat,a.lon]); if(p.trail.length>18) p.trail.shift(); }
     }
     for(const h of [...planes.keys()]) if(!seen.has(h)) planes.delete(h);
-    lastOk=now;
+    lastOk=now; lastErrMsg='';
+  } else {
+    lastErrMsg=`all ${tried} sources failed – last: ${err}`;
   }
   polling=false;
   updateStatus(); updateCard();
 }
 function schedulePoll(){ clearInterval(pollTimer); pollTimer=setInterval(poll,5000); }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) poll(); });
+$('statRow').addEventListener('click',()=>{ if(!polling){ $('stat').textContent='RETRYING...'; $('diag').textContent=''; poll(); } });
 
 /* ---------- UI: status, range, chips ---------- */
 function updateStatus(){
@@ -260,6 +289,7 @@ function updateStatus(){
   $('dot').classList.toggle('off',!ok);
   const inRange=[...planes.values()].filter(p=>{const q=project(p.lat,p.lon);return q.d<=S.range;}).length;
   $('stat').textContent= ok ? `LIVE  ${inRange} CONTACTS  ${Math.round(age)}s` : (lastOk?'LINK LOST':'ACQUIRING...');
+  $('diag').textContent= ok ? '' : lastErrMsg;
 }
 setInterval(updateStatus,1000);
 
