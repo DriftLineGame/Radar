@@ -12,20 +12,23 @@
 <style>
 :root{
   --c:#39ff6a; --c-dim:rgba(57,255,106,.35); --c-faint:rgba(57,255,106,.12);
-  --bg:#020805; --warn:#ff3b3b;
+  --bg:#020805; --warn:#ff3b3b; --amber:#ffb000;
   --mono:'VT323','Courier New',ui-monospace,Menlo,monospace;
 }
-:root[data-theme="amber"]{ --c:#ffb000; --c-dim:rgba(255,176,0,.35); --c-faint:rgba(255,176,0,.12); --bg:#080500; }
+:root[data-theme="amber"]{ --c:#ffb000; --c-dim:rgba(255,176,0,.35); --c-faint:rgba(255,176,0,.12); --bg:#080500; --amber:#ff7a00; }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--c);font-family:var(--mono);overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
 #app{position:fixed;inset:0;display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);height:100dvh}
-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px 4px;gap:8px}
+header{display:flex;align-items:flex-start;justify-content:space-between;padding:8px 12px 4px;gap:8px}
 .title{font-size:26px;letter-spacing:3px;text-shadow:0 0 8px var(--c);line-height:1}
-.status{font-size:17px;opacity:.85;display:flex;align-items:center;gap:6px;white-space:nowrap}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c);animation:blink 1.4s infinite}
-.dot.off{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.status{font-size:17px;opacity:.9;display:flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer;margin-top:2px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c);flex:none}
+.dot.live{animation:blink 1.4s infinite}
+.dot.stale{background:transparent;border:2px solid var(--amber);box-shadow:0 0 6px var(--amber)}
+.dot.off{background:var(--warn);box-shadow:0 0 8px var(--warn);animation:blink .7s infinite}
 @keyframes blink{50%{opacity:.25}}
-.btns{display:flex;gap:6px}
+#diag{font-size:14px;opacity:.6;line-height:1.15;min-height:16px;max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btns{display:flex;gap:6px;flex:none}
 button,.chip{font-family:var(--mono);font-size:17px;color:var(--c);background:transparent;border:1px solid var(--c-dim);border-radius:6px;padding:3px 9px;letter-spacing:1px;cursor:pointer;text-shadow:0 0 5px var(--c)}
 button:active,.chip:active{background:var(--c-faint)}
 .chip.on{background:var(--c);color:#000;text-shadow:none}
@@ -36,7 +39,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;displa
   radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.65) 100%);
   animation:flick 5s infinite}
 @keyframes flick{0%,100%{opacity:1}50%{opacity:.94}52%{opacity:1}}
-.panel{padding:6px 12px 4px;display:flex;flex-direction:column;gap:6px;max-height:44dvh;overflow-y:auto}
+.panel{padding:6px 12px 4px;display:flex;flex-direction:column;gap:6px;max-height:46dvh;overflow-y:auto}
 .row{display:flex;align-items:center;gap:8px}
 .lbl{font-size:18px;min-width:64px}
 .val{font-size:22px;text-shadow:0 0 6px var(--c);min-width:82px;text-align:right}
@@ -45,7 +48,8 @@ input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--c-d
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;margin-top:-11px;border-radius:50%;background:var(--bg);border:2px solid var(--c);box-shadow:0 0 10px var(--c)}
 input[type=range]::-moz-range-track{height:4px;background:var(--c-dim)}
 input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--bg);border:2px solid var(--c)}
-.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips{display:flex;gap:5px}
+.chips .chip{flex:1;text-align:center;padding:3px 2px;font-size:16px;white-space:nowrap}
 .card{border:1px solid var(--c-dim);border-radius:8px;padding:8px 10px;background:linear-gradient(var(--c-faint),transparent);box-shadow:0 0 14px var(--c-faint) inset}
 .card.hide{display:none}
 .card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
@@ -56,6 +60,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .cell b{font-weight:normal;font-size:23px;text-shadow:0 0 6px var(--c)}
 .cell.emg b{color:var(--warn);text-shadow:0 0 8px var(--warn)}
 .hint{font-size:16px;opacity:.6;text-align:center}
+.tapline{cursor:pointer;opacity:.8}
 footer{display:flex;justify-content:center;align-items:center;gap:8px;padding:2px 0 6px;font-size:15px;letter-spacing:4px;opacity:.7}
 footer svg{height:16px;width:auto}
 /* splash */
@@ -83,10 +88,10 @@ footer svg{height:16px;width:auto}
 
 <div id="app">
   <header>
-    <div>
+    <div style="min-width:0">
       <div class="title">AEROSCOPE</div>
-      <div class="status" id="statRow" style="cursor:pointer"><span class="dot off" id="dot"></span><span id="stat">INIT</span></div>
-      <div id="diag" style="font-size:13px;opacity:.55;max-width:62vw;line-height:1.2"></div>
+      <div class="status" id="statRow" title="Tap to retry now"><span class="dot off" id="dot"></span><span id="stat">INIT</span></div>
+      <div id="diag"></div>
     </div>
     <div class="btns">
       <button id="bLoc" title="Use my location">LOC</button>
@@ -121,8 +126,9 @@ footer svg{height:16px;width:auto}
         <div class="cell"><small>POSITION</small><b id="cPos" style="font-size:18px">--</b></div>
       </div>
     </div>
-    <div class="hint" id="hint">TAP A BLIP FOR DETAILS &middot; TAP COORDS TO EDIT CENTER</div>
-    <div class="hint" id="coords" style="opacity:.8;cursor:pointer"></div>
+    <div class="hint" id="hint">TAP A BLIP FOR DETAILS</div>
+    <div class="hint tapline" id="coords"></div>
+    <div class="hint tapline" id="feed"></div>
   </div>
 
   <footer>
@@ -134,21 +140,30 @@ footer svg{height:16px;width:auto}
 <script>
 (()=>{
 'use strict';
+
+/* ================= CONFIG =================
+   Paste your Cloudflare Worker URL here (see aeroscope-worker.js) so every
+   device uses it automatically, e.g. 'https://aeroscope.yourname.workers.dev'.
+   Leave '' to use the public feeds directly. You can also set it per-device
+   by tapping the FEED line under the radar. */
+const PROXY_URL='';
+/* ========================================== */
+
 const $=id=>document.getElementById(id);
 const cv=$('cv'), ctx=cv.getContext('2d');
 const TAU=Math.PI*2, D2R=Math.PI/180;
 
 /* ---------- state ---------- */
-const DEF={lat:50.0163,lon:-125.2733,range:50,units:'av',theme:'green'};
+const DEF={lat:50.0163,lon:-125.2733,range:50,units:'av',theme:'green',proxy:''};
 let S=Object.assign({},DEF);
 try{ Object.assign(S,JSON.parse(localStorage.getItem('aeroscope')||'{}')); }catch(e){}
 const save=()=>{ try{localStorage.setItem('aeroscope',JSON.stringify(S));}catch(e){} };
 const planes=new Map();
-let selHex=null, lastOk=0, polling=false, pollTimer=null, debounce=null, colors={};
+let selHex=null, lastOk=0, colors={};
 
 /* ---------- splash ---------- */
 const splash=$('splash');
-const hideSplash=()=>{ splash.classList.add('gone'); setTimeout(()=>splash.remove(),900); };
+const hideSplash=()=>{ if(!splash.isConnected) return; splash.classList.add('gone'); setTimeout(()=>splash.remove(),900); };
 splash.addEventListener('pointerdown',hideSplash);
 setTimeout(hideSplash,3600);
 
@@ -161,11 +176,11 @@ const fmtAlt=a=>{
   if(S.units==='av') return a>=18000 ? 'FL'+String(Math.round(a/100)).padStart(3,'0') : Math.round(a).toLocaleString()+' FT';
   return Math.round(a*0.3048).toLocaleString()+' M';
 };
-const fmtAltShort=a=> a==='ground'?'GND': a==null?'--': a>=18000?'FL'+Math.round(a/100): Math.round(a/100)*100===0?'0': (Math.round(a/100)*100)/1000+'K';
+const fmtAltShort=a=> a==='ground'?'GND': a==null?'--': a>=18000?'FL'+Math.round(a/100): S.units==='av'? (Math.round(a/100)/10)+'K' : Math.round(a*0.3048/100)/10+'KM';
 const fmtSpd=g=> g==null?'--': S.units==='av'? Math.round(g)+' KT' : Math.round(g*KM)+' KMH';
 const fmtVs=v=>{
   if(v==null) return '--';
-  const arrow=v>64?'\u25B2 ':v<-64?'\u25BC ':'\u25A0 ';
+  const arrow=v>64?'▲ ':v<-64?'▼ ':'■ ';
   return arrow+(S.units==='av'? Math.abs(Math.round(v))+' FPM' : Math.abs(v*0.00508).toFixed(1)+' M/S');
 };
 
@@ -187,7 +202,6 @@ function readColors(){
   const cs=getComputedStyle(document.documentElement);
   colors.c=cs.getPropertyValue('--c').trim();
   colors.warn=cs.getPropertyValue('--warn').trim();
-  colors.bg=cs.getPropertyValue('--bg').trim();
 }
 function rgba(hex,a){
   const n=parseInt(hex.slice(1),16); return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;
@@ -195,101 +209,190 @@ function rgba(hex,a){
 
 /* ---------- geometry ---------- */
 const cosLat=()=>Math.cos(S.lat*D2R);
-function offsetNm(lat,lon){ return [ (lon-S.lon)*60*cosLat(), (lat-S.lat)*60 ]; } // dx east, dy north
 function project(lat,lon){
-  const [dx,dy]=offsetNm(lat,lon), k=R/S.range;
+  const dx=(lon-S.lon)*60*cosLat(), dy=(lat-S.lat)*60, k=R/S.range;
   return {x:cx+dx*k, y:cy-dy*k, d:Math.hypot(dx,dy), brg:(Math.atan2(dx,dy)+TAU)%TAU};
 }
 function livePos(p,now){
   const dt=(now-p.t0)/1000;
   if(p.gs==null||p.trk==null||p.gnd||dt<=0) return [p.lat,p.lon];
-  const d=p.gs/3600*Math.min(dt,30); // nm, capped so stale planes don't fly off
+  const d=p.gs/3600*Math.min(dt,45); // dead-reckon up to 45 s so planes keep moving through short outages
   const th=p.trk*D2R;
   return [p.lat+d*Math.cos(th)/60, p.lon+d*Math.sin(th)/(60*cosLat())];
 }
 
-/* ---------- data ----------
-   Free ADS-B feeds (adsb.lol / airplanes.live / adsb.fi) usually answer curl
-   and server-side fetches fine but sometimes withhold or restrict the
-   Access-Control-Allow-Origin header, which only browsers enforce - so the
-   failure is invisible outside a real browser. Every raw endpoint is tried
-   first, then the same endpoints again through a CORS-adding relay
-   (allorigins) as a fallback so a missing/blocked CORS header can't leave
-   the display stuck silently. */
-const RAW_SOURCES=[
-  (la,lo,r)=>`https://api.adsb.lol/v2/point/${la}/${lo}/${r}`,
-  (la,lo,r)=>`https://api.airplanes.live/v2/point/${la}/${lo}/${r}`,
-  (la,lo,r)=>`https://opendata.adsb.fi/api/v2/lat/${la}/lon/${lo}/dist/${r}`
+/* =====================================================================
+   DATA LAYER
+   The public feeds rate-limit per IP (airplanes.live and adsb.fi at
+   1 req/s, adsb.lol "dynamic"), and on LTE many users share one carrier
+   IP, so throttling is common. A throttled or blocked reply usually has
+   no CORS header, so the browser only reports a generic failure.
+   Strategy:
+     - Stick with whichever feed last worked, and try it alone first.
+     - If it fails, race the other healthy feeds in parallel and take the first good answer.
+     - Any feed that fails gets a cooldown (exponential, or Retry-After on 429).
+     - Poll slower at large ranges, and never overlap requests.
+     - Keep planes on screen through gaps (they fade after 60 s).
+     - An optional personal proxy (Cloudflare Worker) is tried first.
+   ===================================================================== */
+const FEEDS=[
+  {id:'ADSB.LOL',       tier:1, url:(a,o,r)=>`https://api.adsb.lol/v2/point/${a}/${o}/${r}`},
+  {id:'AIRPLANES.LIVE', tier:1, url:(a,o,r)=>`https://api.airplanes.live/v2/point/${a}/${o}/${r}`},
+  {id:'ADSB.FI',        tier:1, url:(a,o,r)=>`https://opendata.adsb.fi/api/v2/lat/${a}/lon/${o}/dist/${r}`},
+  {id:'RELAY-A',        tier:2, url:(a,o,r)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://api.airplanes.live/v2/point/${a}/${o}/${r}`)}`},
+  {id:'RELAY-B',        tier:2, url:(a,o,r)=>`https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(`https://api.adsb.lol/v2/point/${a}/${o}/${r}`)}`}
 ];
-const viaRelay=url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-const ENDPOINTS=[...RAW_SOURCES, ...RAW_SOURCES.map(f=>(la,lo,r)=>viaRelay(f(la,lo,r)))];
+const proxyBase=()=>(S.proxy||PROXY_URL||'').trim().replace(/\/+$/,'');
+function feedList(){
+  const px=proxyBase();
+  return px ? [{id:'PROXY',tier:0,url:(a,o,r)=>`${px}/?lat=${a}&lon=${o}&r=${r}`},...FEEDS] : FEEDS;
+}
+const health={};
+const HL=id=>health[id]||(health[id]={fails:0,until:0,err:''});
+let sticky=null, lastSrc='', lastErrMsg='', lastFetchR=0, nextTimer=null, inflight=false, pollN=0;
 
-let lastErrMsg='';
-async function fetchJson(url){
-  const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),9000);
+class FeedError extends Error{ constructor(m,retryAfter){ super(m); this.retryAfter=retryAfter; } }
+
+async function fetchFeed(f,a,o,r,ms,outer){
+  const ctl=new AbortController();
+  const t=setTimeout(()=>ctl.abort(),ms);
+  const onOuter=()=>ctl.abort();
+  if(outer) outer.addEventListener('abort',onOuter);
   try{
-    const res=await fetch(url,{signal:ctl.signal,mode:'cors',cache:'no-store'});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    return await res.json();
+    const res=await fetch(f.url(a,o,r),{signal:ctl.signal,cache:'no-store',credentials:'omit'});
+    if(res.status===429){ const ra=parseFloat(res.headers.get('retry-after')); throw new FeedError('rate limited',isNaN(ra)?30:Math.min(ra,120)); }
+    if(!res.ok) throw new FeedError('HTTP '+res.status);
+    const txt=await res.text();
+    let j; try{ j=JSON.parse(txt); }catch(e){ throw new FeedError('blocked page'); }
+    const ac=j.ac||j.aircraft;
+    if(!Array.isArray(ac)) throw new FeedError('bad reply');
+    return {ac,src:f.id};
   }catch(e){
-    if(e.name==='AbortError') throw new Error('timed out');
-    // A generic "Failed to fetch"/TypeError from fetch() almost always means
-    // CORS blocked the response or the network/DNS request itself failed.
-    throw new Error(e.message==='Failed to fetch'||e instanceof TypeError ? 'network/CORS blocked' : e.message);
-  } finally{ clearTimeout(t); }
+    if(e instanceof FeedError) throw e;
+    if(e && e.name==='AbortError') throw new FeedError(outer&&outer.aborted?'cancelled':'timeout');
+    throw new FeedError('blocked');
+  }finally{
+    clearTimeout(t);
+    if(outer) outer.removeEventListener('abort',onOuter);
+  }
 }
+function markOk(f){ const h=HL(f.id); h.fails=0; h.until=0; h.err=''; }
+function markFail(f,e){
+  if(e.message==='cancelled') return;
+  const h=HL(f.id); h.fails++; h.err=e.message;
+  const back=e.retryAfter ? e.retryAfter*1000 : Math.min(60000,2500*Math.pow(2,h.fails-1));
+  h.until=Date.now()+back*(0.85+Math.random()*0.3);
+}
+const timeoutFor=f=>f.tier===2?11000:(S.range>150?10000:7000);
+
+async function tryOne(f,a,o,r){
+  try{ const v=await fetchFeed(f,a,o,r,timeoutFor(f)); markOk(f); return v; }
+  catch(e){ markFail(f,e); throw e; }
+}
+async function race(cands,a,o,r){
+  const master=new AbortController();
+  try{
+    return await Promise.any(cands.map(f=>
+      fetchFeed(f,a,o,r,timeoutFor(f),master.signal).then(v=>{markOk(f);return v;},e=>{markFail(f,e);throw e;})
+    ));
+  }finally{ master.abort(); }
+}
+
+const pollEvery=()=> S.range<=60?5000 : S.range<=150?7000 : 9000;
+function schedule(ms){ clearTimeout(nextTimer); nextTimer=setTimeout(poll,Math.max(1000,Math.min(ms,60000))); }
+
 async function poll(){
-  if(polling||document.hidden) return;
-  polling=true;
+  clearTimeout(nextTimer);
+  if(inflight) return;
+  if(document.hidden){ return; }                 // resumes on visibilitychange
+  inflight=true; pollN++;
   const r=Math.min(250,Math.max(5,Math.ceil(S.range*1.05)));
-  let data=null, tried=0, err='';
-  for(const ep of ENDPOINTS){
-    tried++;
-    try{
-      data=await fetchJson(ep(S.lat.toFixed(4),S.lon.toFixed(4),r));
-      if(data&&Array.isArray(data.ac||data.aircraft)) break;
-      data=null; err='unexpected response';
-    }catch(e){ data=null; err=e.message; }
+  const a=S.lat.toFixed(3), o=S.lon.toFixed(3);
+  const feeds=feedList(), now=Date.now();
+  const avail=f=>HL(f.id).until<=now;
+  let got=null, err='', triedSticky=false;
+
+  // 1) sticky feed alone (skip every 8th poll when it's a relay, to probe for better feeds)
+  const st=feeds.find(f=>f.id===sticky);
+  const probe=st && st.tier>=2 && pollN%8===0;
+  if(st && avail(st) && !probe){
+    triedSticky=true;
+    try{ got=await tryOne(st,a,o,r); }catch(e){ err=e.message; }
   }
-  if(data){
-    const list=data.ac||data.aircraft||[];
-    const now=Date.now(), seen=new Set();
-    for(const a of list){
-      if(a.lat==null||a.lon==null||!a.hex) continue;
-      seen.add(a.hex);
-      let p=planes.get(a.hex);
-      if(!p){ p={hex:a.hex,trail:[]}; planes.set(a.hex,p); }
-      p.flight=(a.flight||'').trim(); p.t=a.t||''; p.reg=a.r||''; p.desc=a.desc||'';
-      p.gnd=a.alt_baro==='ground';
-      p.alt=p.gnd?'ground':(typeof a.alt_baro==='number'?a.alt_baro:(typeof a.alt_geom==='number'?a.alt_geom:null));
-      p.gs=typeof a.gs==='number'?a.gs:null;
-      p.trk=typeof a.track==='number'?a.track:(typeof a.true_heading==='number'?a.true_heading:null);
-      p.vs=typeof a.baro_rate==='number'?a.baro_rate:(typeof a.geom_rate==='number'?a.geom_rate:null);
-      p.sq=a.squawk||'';
-      p.lat=a.lat; p.lon=a.lon; p.t0=now-((a.seen_pos||0)*1000);
-      const last=p.trail[p.trail.length-1];
-      if(!last||last[0]!==a.lat||last[1]!==a.lon){ p.trail.push([a.lat,a.lon]); if(p.trail.length>18) p.trail.shift(); }
-    }
-    for(const h of [...planes.keys()]) if(!seen.has(h)) planes.delete(h);
-    lastOk=now; lastErrMsg='';
-  } else {
-    lastErrMsg=`all ${tried} sources failed – last: ${err}`;
+  // 2) race each tier in order
+  for(const tier of [0,1,2]){
+    if(got) break;
+    const c=feeds.filter(f=>f.tier===tier && avail(f) && !(triedSticky && f.id===sticky));
+    if(!c.length) continue;
+    try{ got=await race(c,a,o,r); }
+    catch(e){ const es=(e.errors||[]).filter(x=>x.message!=='cancelled'); if(es.length) err=es[0].message; }
   }
-  polling=false;
-  updateStatus(); updateCard();
+
+  if(got){
+    sticky=got.src; lastSrc=got.src; lastFetchR=r; lastErrMsg='';
+    ingest(got.ac);
+    inflight=false;
+    updateStatus(); updateCard();
+    schedule(pollEvery());
+  }else{
+    const soonest=Math.min(...feeds.map(f=>HL(f.id).until));
+    lastErrMsg=err ? `${err.toUpperCase()} · RETRYING` : 'COOLING DOWN · RETRYING';
+    inflight=false;
+    updateStatus();
+    schedule(Math.max(2500,soonest-Date.now()));
+  }
 }
-function schedulePoll(){ clearInterval(pollTimer); pollTimer=setInterval(poll,5000); }
+
+function ingest(list){
+  const now=Date.now();
+  for(const a of list){
+    if(a.lat==null||a.lon==null||!a.hex) continue;
+    if(typeof a.seen_pos==='number' && a.seen_pos>60) continue;
+    let p=planes.get(a.hex);
+    if(!p){ p={hex:a.hex,trail:[]}; planes.set(a.hex,p); }
+    p.flight=(a.flight||'').trim(); p.t=a.t||''; p.reg=a.r||''; p.desc=a.desc||'';
+    p.gnd=a.alt_baro==='ground';
+    p.alt=p.gnd?'ground':(typeof a.alt_baro==='number'?a.alt_baro:(typeof a.alt_geom==='number'?a.alt_geom:null));
+    p.gs=typeof a.gs==='number'?a.gs:null;
+    p.trk=typeof a.track==='number'?a.track:(typeof a.true_heading==='number'?a.true_heading:null);
+    p.vs=typeof a.baro_rate==='number'?a.baro_rate:(typeof a.geom_rate==='number'?a.geom_rate:null);
+    p.sq=a.squawk||'';
+    p.lat=a.lat; p.lon=a.lon; p.t0=now-((a.seen_pos||0)*1000); p.seenAt=now;
+    const last=p.trail[p.trail.length-1];
+    if(last && Math.hypot((a.lat-last[0])*60,(a.lon-last[1])*60*cosLat())>8) p.trail.length=0;
+    if(!last||last[0]!==a.lat||last[1]!==a.lon){ p.trail.push([a.lat,a.lon]); if(p.trail.length>18) p.trail.shift(); }
+  }
+  // keep planes briefly when they drop out of one reply (different feeds see slightly different sets)
+  for(const [h,p] of planes) if(now-p.seenAt>60000) planes.delete(h);
+  lastOk=now;
+}
+
+function retryNow(){
+  for(const k in health){ health[k].until=0; }
+  $('stat').textContent='RETRYING...'; $('diag').textContent='';
+  poll();
+}
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) poll(); });
-$('statRow').addEventListener('click',()=>{ if(!polling){ $('stat').textContent='RETRYING...'; $('diag').textContent=''; poll(); } });
+window.addEventListener('online',retryNow);
+window.addEventListener('pageshow',e=>{ if(e.persisted) poll(); });
+$('statRow').addEventListener('click',()=>{ if(!inflight) retryNow(); });
 
 /* ---------- UI: status, range, chips ---------- */
 function updateStatus(){
-  const age=(Date.now()-lastOk)/1000;
-  const ok=lastOk&&age<20;
-  $('dot').classList.toggle('off',!ok);
-  const inRange=[...planes.values()].filter(p=>{const q=project(p.lat,p.lon);return q.d<=S.range;}).length;
-  $('stat').textContent= ok ? `LIVE  ${inRange} CONTACTS  ${Math.round(age)}s` : (lastOk?'LINK LOST':'ACQUIRING...');
-  $('diag').textContent= ok ? '' : lastErrMsg;
+  const now=Date.now(), age=lastOk?(now-lastOk)/1000:Infinity;
+  let n=0; for(const p of planes.values()){ if(project(p.lat,p.lon).d<=S.range) n++; }
+  const dot=$('dot');
+  dot.className='dot '+(age<20?'live':age<120?'stale':'off');
+  if(age<20){
+    $('stat').textContent=`LIVE  ${n} CONTACTS`;
+    $('diag').textContent=`VIA ${lastSrc}`;
+  }else if(age<120){
+    $('stat').textContent=`DELAYED ${Math.round(age)}s  ${n} CONTACTS`;
+    $('diag').textContent=lastErrMsg||'RECONNECTING...';
+  }else{
+    $('stat').textContent=lastOk?'NO SIGNAL – TAP TO RETRY':'ACQUIRING...';
+    $('diag').textContent=lastErrMsg;
+  }
 }
 setInterval(updateStatus,1000);
 
@@ -303,12 +406,15 @@ function buildChips(){
     b.addEventListener('click',()=>setRange(n)); box.appendChild(b);
   });
 }
+let rangeDebounce=null;
 function setRange(nm,fromSlider){
   S.range=Math.max(5,Math.min(250,Math.round(nm)));
   if(!fromSlider) $('rng').value=nmToSlider(S.range);
   $('rngv').textContent=fmtDist(S.range);
   buildChips(); save();
-  clearTimeout(debounce); debounce=setTimeout(poll,350);
+  // zooming in reuses data already on hand; only zooming out past it needs a fetch
+  clearTimeout(rangeDebounce);
+  if(Math.ceil(S.range*1.05)>lastFetchR) rangeDebounce=setTimeout(poll,600);
 }
 $('rng').addEventListener('input',e=>setRange(sliderToNm(+e.target.value),true));
 
@@ -316,7 +422,8 @@ function refreshLabels(){
   $('bUnit').textContent=S.units==='av'?'AVN':'MET';
   $('bTheme').textContent=S.theme==='green'?'GRN':'AMB';
   $('rngv').textContent=fmtDist(S.range);
-  $('coords').textContent=`CENTER ${S.lat.toFixed(3)}, ${S.lon.toFixed(3)}`;
+  $('coords').textContent=`CENTER ${S.lat.toFixed(3)}, ${S.lon.toFixed(3)}  ·  TAP TO EDIT`;
+  $('feed').textContent=proxyBase()?'FEED: PERSONAL PROXY  ·  TAP TO CHANGE':'FEED: PUBLIC  ·  TAP TO ADD PROXY';
   buildChips(); updateCard();
 }
 $('bUnit').addEventListener('click',()=>{ S.units=S.units==='av'?'me':'av'; save(); refreshLabels(); });
@@ -326,10 +433,17 @@ $('bTheme').addEventListener('click',()=>{
   document.querySelector('meta[name=theme-color]').content=S.theme==='green'?'#020805':'#080500';
   save(); readColors(); refreshLabels();
 });
+$('feed').addEventListener('click',()=>{
+  const v=prompt('Personal proxy URL (your Cloudflare Worker, e.g. https://aeroscope.you.workers.dev).\nLeave blank to use public feeds.',S.proxy||PROXY_URL||'');
+  if(v===null) return;
+  const t=v.trim();
+  if(t && !/^https:\/\/[^\s]+$/i.test(t)){ alert('That needs to be an https:// URL.'); return; }
+  S.proxy=t; save(); sticky=null; refreshLabels(); retryNow();
+});
 
 /* ---------- location ---------- */
 function setCenter(lat,lon){
-  S.lat=lat; S.lon=lon; save(); planes.clear(); lastOk=0; selHex=null; refreshLabels(); poll();
+  S.lat=lat; S.lon=lon; save(); planes.clear(); lastOk=0; lastFetchR=0; selHex=null; refreshLabels(); poll();
 }
 $('bLoc').addEventListener('click',()=>{
   if(!navigator.geolocation){ manualLoc(); return; }
@@ -355,15 +469,15 @@ function updateCard(){
   card.classList.remove('hide'); $('hint').style.display='none';
   const [la,lo]=livePos(p,Date.now()), q=project(la,lo);
   $('cCs').textContent=p.flight||p.reg||p.hex.toUpperCase();
-  $('cSub').textContent=[p.desc||p.t, p.reg].filter(Boolean).join(' \u00B7 ')||'UNKNOWN TYPE';
+  $('cSub').textContent=[p.desc||p.t, p.reg].filter(Boolean).join(' · ')||'UNKNOWN TYPE';
   $('cAlt').textContent=fmtAlt(p.alt);
   $('cSpd').textContent=fmtSpd(p.gs);
-  $('cHdg').textContent=p.trk==null?'--':String(Math.round(p.trk)).padStart(3,'0')+'\u00B0';
+  $('cHdg').textContent=p.trk==null?'--':String(Math.round(p.trk)).padStart(3,'0')+'°';
   $('cVs').textContent=fmtVs(p.vs);
   $('cSq').textContent=p.sq||'--';
   $('cSqWrap').classList.toggle('emg',['7500','7600','7700'].includes(p.sq));
   $('cDist').textContent=fmtDist(q.d);
-  $('cBrg').textContent=String(Math.round(q.brg/D2R)%360).padStart(3,'0')+'\u00B0';
+  $('cBrg').textContent=String(Math.round(q.brg/D2R)%360).padStart(3,'0')+'°';
   $('cHex').textContent=p.hex.toUpperCase();
   $('cPos').textContent=`${la.toFixed(2)}, ${lo.toFixed(2)}`;
 }
@@ -371,9 +485,10 @@ setInterval(updateCard,500);
 $('bClose').addEventListener('click',()=>{ selHex=null; updateCard(); });
 
 /* ---------- picking ---------- */
+let pingT=0;
 cv.addEventListener('pointerdown',e=>{
   const r=cv.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top, now=Date.now();
-  let best=null,bd=34;
+  let best=null,bd=30;
   for(const p of planes.values()){
     const [la,lo]=livePos(p,now), q=project(la,lo);
     if(q.d>S.range) continue;
@@ -382,10 +497,10 @@ cv.addEventListener('pointerdown',e=>{
   }
   selHex=best?best.hex:null; pingT=performance.now(); updateCard();
 });
-let pingT=0;
 
 /* ---------- drawing ---------- */
 const SWEEP_MS=4200;
+const FONT_LBL='16px VT323, Courier New, monospace';
 function draw(ts){
   requestAnimationFrame(draw);
   if(!W) return;
@@ -400,8 +515,8 @@ function draw(ts){
   ctx.fillStyle=g; ctx.fillRect(cx-R,cy-R,R*2,R*2);
 
   // sweep trail
-  const sw=((ts%SWEEP_MS)/SWEEP_MS)*TAU;      // clockwise from north
-  const slices=54, span=75*D2R;
+  const sw=((ts%SWEEP_MS)/SWEEP_MS)*TAU;
+  const slices=48, span=75*D2R;
   for(let i=0;i<slices;i++){
     const a1=sw-span*(i/slices)-Math.PI/2, a0=sw-span*((i+1)/slices)-Math.PI/2;
     ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,a0,a1+.01); ctx.closePath();
@@ -414,9 +529,8 @@ function draw(ts){
   ctx.font='15px VT323, Courier New, monospace'; ctx.textAlign='left'; ctx.textBaseline='middle';
   for(let i=1;i<=4;i++){
     ctx.beginPath(); ctx.arc(cx,cy,R*i/4,0,TAU); ctx.stroke();
-    const lab=fmtDist(S.range*i/4);
     const ax=cx+Math.cos(-Math.PI/4)*R*i/4, ay=cy+Math.sin(-Math.PI/4)*R*i/4;
-    ctx.fillText(lab,ax+3,ay-2);
+    ctx.fillText(fmtDist(S.range*i/4),ax+3,ay-2);
   }
   ctx.beginPath(); ctx.moveTo(cx-R,cy); ctx.lineTo(cx+R,cy); ctx.moveTo(cx,cy-R); ctx.lineTo(cx,cy+R); ctx.stroke();
   ctx.strokeStyle=rgba(C,.15);
@@ -427,10 +541,12 @@ function draw(ts){
   ctx.strokeStyle=rgba(C,.9); ctx.lineWidth=2; ctx.shadowColor=C; ctx.shadowBlur=10;
   ctx.beginPath(); ctx.arc(cx,cy,R,0,TAU); ctx.stroke();
   ctx.lineWidth=1;
+  ctx.beginPath();
   for(let d=0;d<360;d+=10){
     const t=(d-90)*D2R, len=d%30===0?10:5;
-    ctx.beginPath(); ctx.moveTo(cx+Math.cos(t)*R,cy+Math.sin(t)*R); ctx.lineTo(cx+Math.cos(t)*(R+len),cy+Math.sin(t)*(R+len)); ctx.stroke();
+    ctx.moveTo(cx+Math.cos(t)*R,cy+Math.sin(t)*R); ctx.lineTo(cx+Math.cos(t)*(R+len),cy+Math.sin(t)*(R+len));
   }
+  ctx.stroke();
   ctx.shadowBlur=0;
   ctx.textAlign='center'; ctx.font='19px VT323, Courier New, monospace'; ctx.fillStyle=C;
   [['N',0],['E',90],['S',180],['W',270]].forEach(([l,d])=>{ const t=(d-90)*D2R; ctx.fillText(l,cx+Math.cos(t)*(R+15),cy+Math.sin(t)*(R+15)); });
@@ -439,64 +555,80 @@ function draw(ts){
   ctx.save(); ctx.shadowColor=C; ctx.shadowBlur=12; ctx.strokeStyle=C; ctx.lineWidth=2;
   ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.sin(sw)*R,cy-Math.cos(sw)*R); ctx.stroke(); ctx.restore();
 
-  // blips
+  // collect blips
   const list=[];
   for(const p of planes.values()){
     const [la,lo]=livePos(p,now), q=project(la,lo);
     if(q.d>S.range) continue;
-    list.push({p,q,la,lo});
-  }
-  const showAll=list.length<=22;
-  ctx.textBaseline='middle';
-  for(const {p,q} of list){
     const sel=p.hex===selHex;
     const emg=['7500','7600','7700'].includes(p.sq);
-    const bright=1-((((sw-q.brg)%TAU)+TAU)%TAU)/TAU;   // 1 right after sweep passes
-    const a=Math.max(p.gnd?.18:.3,bright);
-    let col=emg?(Math.floor(ts/300)%2?colors.warn:C):C;
+    const bright=1-((((sw-q.brg)%TAU)+TAU)%TAU)/TAU;
+    const staleF=now-p.seenAt>20000 ? .45 : 1;          // dim planes we haven't heard about recently
+    const a=Math.max(p.gnd?.18:.3,bright)*staleF;
+    const col=emg?(Math.floor(ts/300)%2?colors.warn:C):C;
+    list.push({p,q,sel,emg,bright,a,col});
+  }
+  const heavy=list.length>60;
 
-    // trail
-    if(p.trail.length>1 && (a>.4||sel)){
-      ctx.strokeStyle=rgba(col.startsWith('#')?col:C,.35*a); ctx.lineWidth=1; ctx.beginPath();
+  // trails + vectors + glyphs
+  for(const o of list){
+    const {p,q,sel,a,col}=o;
+    if(p.trail.length>1 && (sel || a>(heavy?.6:.4))){
+      ctx.strokeStyle=rgba(col,.35*a); ctx.lineWidth=1; ctx.beginPath();
       p.trail.forEach(([tla,tlo],i)=>{ const t=project(tla,tlo); i?ctx.lineTo(t.x,t.y):ctx.moveTo(t.x,t.y); });
       ctx.lineTo(q.x,q.y); ctx.stroke();
     }
-    // velocity vector (1 min ahead)
-    if(p.gs&&p.trk!=null&&!p.gnd&&(a>.4||sel)){
+    if(p.gs&&p.trk!=null&&!p.gnd&&(sel || a>(heavy?.6:.4))){
       const len=Math.min(40,(p.gs/60)*(R/S.range)), t=p.trk*D2R;
       ctx.strokeStyle=rgba(col,.55*a); ctx.beginPath(); ctx.moveTo(q.x,q.y); ctx.lineTo(q.x+Math.sin(t)*len,q.y-Math.cos(t)*len); ctx.stroke();
     }
-    // glyph
     ctx.save(); ctx.translate(q.x,q.y);
-    ctx.shadowColor=col; ctx.shadowBlur=sel?16:10*a;
+    ctx.shadowColor=col; ctx.shadowBlur=sel?16:(heavy?0:10*a);   // shadows are costly on iPhone with many blips
     ctx.fillStyle=rgba(col,Math.min(1,a+.1));
     if(p.gnd){ ctx.fillRect(-2,-2,4,4); }
     else{
       ctx.rotate((p.trk==null?0:p.trk)*D2R);
-      const s=sel?8:6;
+      const s=sel?8:(heavy?5:6);
       ctx.beginPath();
-      if(p.trk==null){ ctx.arc(0,0,3.2,0,TAU); }
+      if(p.trk==null){ ctx.arc(0,0,3,0,TAU); }
       else{ ctx.moveTo(0,-s); ctx.lineTo(s*.65,s*.75); ctx.lineTo(0,s*.35); ctx.lineTo(-s*.65,s*.75); ctx.closePath(); }
       ctx.fill();
     }
     ctx.restore();
+  }
 
-    // label
-    if(sel||showAll||bright>.55){
-      const la2=sel?1:Math.max(.35,a);
-      ctx.textAlign='left'; ctx.font='16px VT323, Courier New, monospace';
-      ctx.fillStyle=rgba(col,la2);
-      const cs=p.flight||p.reg||p.hex.toUpperCase();
-      let lx=q.x+10, ly=q.y-9;
-      if(lx>W-70) { ctx.textAlign='right'; lx=q.x-10; }
-      ctx.fillText(cs,lx,ly);
-      ctx.fillStyle=rgba(col,la2*.8);
-      ctx.fillText(`${fmtAltShort(p.alt)} ${p.gs!=null?Math.round(p.gs):'--'}`,lx,ly+13);
+  // labels with collision avoidance (prevents the smeared blob at big ranges)
+  const showAll=list.length<=20;
+  const maxLabels=showAll?99:(heavy?10:16);
+  const want=list.filter(o=>o.sel||o.emg||showAll||o.bright>.6)
+                 .sort((x,y)=>(y.sel-x.sel)||(y.emg-x.emg)||(y.bright-x.bright));
+  const boxes=[];
+  ctx.font='15px VT323, Courier New, monospace';
+  for(let i=1;i<=4;i++){ const ax=cx+Math.cos(-Math.PI/4)*R*i/4+3, ay=cy+Math.sin(-Math.PI/4)*R*i/4-2; boxes.push({x:ax,y:ay-9,w:ctx.measureText(fmtDist(S.range*i/4)).width,h:18}); }
+  const hits=b=>boxes.some(k=>b.x<k.x+k.w&&b.x+b.w>k.x&&b.y<k.y+k.h&&b.y+b.h>k.y);
+  ctx.font=FONT_LBL; ctx.textAlign='left'; ctx.textBaseline='middle';
+  let shown=0;
+  for(const o of want){
+    if(!o.sel && shown>=maxLabels) break;
+    const {p,q}=o;
+    const l1=p.flight||p.reg||p.hex.toUpperCase();
+    const l2=`${fmtAltShort(p.alt)} ${p.gs!=null?Math.round(p.gs):'--'}`;
+    const w=Math.max(ctx.measureText(l1).width,ctx.measureText(l2).width)+4, h=28;
+    let pick=null;
+    for(const [dx,dy] of [[9,-24],[-9-w,-24],[9,2],[-9-w,2]]){
+      const b={x:q.x+dx,y:q.y+dy,w,h};
+      if(b.x<2||b.x+w>W-2||b.y<2||b.y+h>H-2) continue;
+      if(o.sel||!hits(b)){ pick=b; break; }
     }
+    if(!pick) continue;
+    boxes.push(pick); shown++;
+    const la2=o.sel?1:Math.max(.4,o.a);
+    ctx.fillStyle=rgba(o.col,la2); ctx.fillText(l1,pick.x+2,pick.y+7);
+    ctx.fillStyle=rgba(o.col,la2*.8); ctx.fillText(l2,pick.x+2,pick.y+21);
   }
 
   // selection reticle + ping + range line
-  const sp=selHex&&list.find(o=>o.p.hex===selHex);
+  const sp=selHex&&list.find(o=>o.sel);
   if(sp){
     const {q}=sp;
     ctx.save(); ctx.strokeStyle=C; ctx.lineWidth=1.5; ctx.shadowColor=C; ctx.shadowBlur=10;
@@ -519,9 +651,10 @@ function draw(ts){
 document.documentElement.dataset.theme=S.theme;
 readColors(); resize(); refreshLabels();
 $('rng').value=nmToSlider(S.range);
-schedulePoll(); poll();
+poll();
 requestAnimationFrame(draw);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(readColors);
+window.__aeroscope={health,planes,get sticky(){return sticky;}};   // for debugging
 })();
 </script>
 </body>
